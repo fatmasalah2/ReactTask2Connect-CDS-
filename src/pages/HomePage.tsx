@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Typography,
@@ -14,9 +14,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
-import axios from 'axios';
-import { useAppDispatch } from '../store/hooks';
-import { addSearch } from '../store/searchHistorySlice';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { addSearch, fetchSearchResults, clearCurrentSearch } from '../store/searchHistorySlice';
 import { useNavigate } from 'react-router-dom';
 
 interface SearchResult {
@@ -27,46 +26,38 @@ interface SearchResult {
 
 const HomePage: React.FC = () => {
     const [input, setInput] = useState("");
-    const [results, setResults] = useState<SearchResult[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
+    // Get current search state from Redux
+    const { results, loading, error } = useAppSelector(state => state.searchHistory.currentSearch);
+
+    // Clear current search when component unmounts
+    useEffect(() => {
+        return () => {
+            dispatch(clearCurrentSearch());
+        };
+    }, [dispatch]);
+
     const handleSearch = async () => {
         if (!input.trim()) {
-            setError("Please fill in the search field");
             return;
         }
 
-        setLoading(true);
-        setError("");
-        setResults([]);
-
         try {
-            // Call Datamuse API with ml parameter using axios
-            const response = await axios.get(`https://api.datamuse.com/words`, {
-                params: {
-                    ml: input.trim()
-                }
-            });
+            // Use async thunk to fetch results
+            const resultAction = await dispatch(fetchSearchResults(input.trim()));
 
-            const searchResults = Array.isArray(response.data) ? response.data : [response.data];
-            setResults(searchResults);
-
-            // Save to Redux store
-            dispatch(addSearch({
-                query: input.trim(),
-                results: searchResults
-            }));
-        } catch (err) {
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message || "An error occurred while fetching data");
-            } else {
-                setError("An error occurred while fetching data");
+            // If the search was successful, add to history
+            if (fetchSearchResults.fulfilled.match(resultAction)) {
+                dispatch(addSearch({
+                    query: input.trim(),
+                    results: resultAction.payload
+                }));
             }
-        } finally {
-            setLoading(false);
+        } catch (err) {
+            // Error handling is now managed by the async thunk
+            console.error('Search failed:', err);
         }
     };
 

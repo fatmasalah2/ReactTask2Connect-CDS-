@@ -9,7 +9,11 @@ import {
     Button,
     IconButton,
     Chip,
-    Divider
+    Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
@@ -18,6 +22,8 @@ import HomeIcon from '@mui/icons-material/Home';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import HistoryIcon from '@mui/icons-material/History';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { clearHistory, removeSearch } from '../store/searchHistorySlice';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +33,9 @@ const History: React.FC = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const [expandedSearches, setExpandedSearches] = useState<Set<string>>(new Set());
+    const [carouselIndices, setCarouselIndices] = useState<{ [key: string]: number }>({});
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [searchToDelete, setSearchToDelete] = useState<{ id: string; query: string } | null>(null);
 
     const formatDate = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -47,6 +56,23 @@ const History: React.FC = () => {
         dispatch(removeSearch(id));
     };
 
+    const openDeleteDialog = (search: { id: string; query: string }) => {
+        setSearchToDelete(search);
+        setDeleteDialogOpen(true);
+    };
+
+    const closeDeleteDialog = () => {
+        setDeleteDialogOpen(false);
+        setSearchToDelete(null);
+    };
+
+    const confirmDelete = () => {
+        if (searchToDelete) {
+            handleRemoveSearch(searchToDelete.id);
+            closeDeleteDialog();
+        }
+    };
+
     const toggleSearchExpansion = (searchId: string) => {
         const newExpanded = new Set(expandedSearches);
         if (newExpanded.has(searchId)) {
@@ -55,6 +81,30 @@ const History: React.FC = () => {
             newExpanded.add(searchId);
         }
         setExpandedSearches(newExpanded);
+    };
+
+    const nextSlide = (searchId: string, totalResults: number) => {
+        setCarouselIndices(prev => ({
+            ...prev,
+            [searchId]: Math.min((prev[searchId] || 0) + 1, Math.max(0, totalResults - 1))
+        }));
+    };
+
+    const prevSlide = (searchId: string) => {
+        setCarouselIndices(prev => ({
+            ...prev,
+            [searchId]: Math.max((prev[searchId] || 0) - 1, 0)
+        }));
+    };
+
+    const getCurrentIndex = (searchId: string) => carouselIndices[searchId] || 0;
+
+    const chunkArray = (arr: any[], size: number) => {
+        const chunks = [];
+        for (let i = 0; i < arr.length; i += size) {
+            chunks.push(arr.slice(i, i + size));
+        }
+        return chunks;
     };
 
     return (
@@ -365,7 +415,7 @@ const History: React.FC = () => {
                                             )}
                                         </Box>
                                         <IconButton
-                                            onClick={() => handleRemoveSearch(search.id)}
+                                            onClick={() => openDeleteDialog({ id: search.id, query: search.query })}
                                             sx={{
                                                 color: '#e74c3c',
                                                 backgroundColor: 'rgba(231, 76, 60, 0.1)',
@@ -384,104 +434,252 @@ const History: React.FC = () => {
 
                                     <Divider sx={{ marginBottom: 3, opacity: 0.3 }} />
 
-                                    {/* Results Grid */}
+                                    {/* Carousel Results */}
                                     <Box sx={{
-                                        display: 'grid',
-                                        gridTemplateColumns: {
-                                            xs: '1fr',
-                                            sm: 'repeat(2, 1fr)',
-                                            md: 'repeat(3, 1fr)',
-                                            lg: 'repeat(4, 1fr)'
-                                        },
-                                        gap: 2.5,
+                                        position: 'relative',
                                         marginBottom: 3
                                     }}>
-                                        {search.results.slice(0, expandedSearches.has(search.id) ? search.results.length : 6).map((result, index) => (
-                                            <Card
-                                                key={`${result.word || 'unknown'}-${index}`}
-                                                elevation={0}
+                                        {/* Carousel Container */}
+                                        <Box sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            minHeight: 200,
+                                            position: 'relative'
+                                        }}>
+                                            {/* Navigation Arrows */}
+                                            {(() => {
+                                                const groupedResults = chunkArray(search.results, 6);
+                                                return groupedResults.length > 1 && (
+                                                    <>
+                                                        <IconButton
+                                                            onClick={() => prevSlide(search.id)}
+                                                            disabled={getCurrentIndex(search.id) === 0}
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                left: -20,
+                                                                zIndex: 2,
+                                                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                                                                    transform: 'scale(1.1)',
+                                                                },
+                                                                '&:disabled': {
+                                                                    opacity: 0.3,
+                                                                    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                                                                },
+                                                                transition: 'all 0.2s ease-in-out'
+                                                            }}
+                                                        >
+                                                            <ChevronLeftIcon />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            onClick={() => nextSlide(search.id, groupedResults.length)}
+                                                            disabled={getCurrentIndex(search.id) >= groupedResults.length - 1}
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                right: -20,
+                                                                zIndex: 2,
+                                                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                                                                    transform: 'scale(1.1)',
+                                                                },
+                                                                '&:disabled': {
+                                                                    opacity: 0.3,
+                                                                    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                                                                },
+                                                                transition: 'all 0.2s ease-in-out'
+                                                            }}
+                                                        >
+                                                            <ChevronRightIcon />
+                                                        </IconButton>
+                                                    </>
+                                                );
+                                            })()}
+
+                                            {/* Results Grid (6 results at a time) */}
+                                            {(() => {
+                                                const groupedResults = chunkArray(search.results, 6);
+                                                const currentGroup = groupedResults[getCurrentIndex(search.id)] || [];
+
+                                                return (
+                                                    <Box sx={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: {
+                                                            xs: 'repeat(2, 1fr)',
+                                                            sm: 'repeat(3, 1fr)',
+                                                            md: 'repeat(3, 1fr)',
+                                                            lg: 'repeat(3, 1fr)'
+                                                        },
+                                                        gap: 2,
+                                                        width: '100%',
+                                                        maxWidth: 800
+                                                    }}>
+                                                        {currentGroup.map((result, index) => (
+                                                            <Card
+                                                                key={`${result.word || 'unknown'}-${getCurrentIndex(search.id) * 6 + index}`}
+                                                                elevation={0}
+                                                                sx={{
+                                                                    background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                                                                    border: '1px solid rgba(0, 0, 0, 0.06)',
+                                                                    borderRadius: 2,
+                                                                    transition: 'all 0.2s ease-in-out',
+                                                                    '&:hover': {
+                                                                        transform: 'translateY(-2px)',
+                                                                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                                                                        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                                                                    },
+                                                                }}
+                                                            >
+                                                                <CardContent sx={{
+                                                                    padding: 2,
+                                                                    textAlign: 'center'
+                                                                }}>
+                                                                    <Typography
+                                                                        variant="h6"
+                                                                        component="div"
+                                                                        sx={{
+                                                                            color: '#2c3e50',
+                                                                            fontWeight: '600',
+                                                                            marginBottom: 1,
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            whiteSpace: 'nowrap',
+                                                                            fontSize: '0.9rem'
+                                                                        }}
+                                                                    >
+                                                                        {result.word || 'Unknown'}
+                                                                    </Typography>
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        sx={{
+                                                                            color: '#34495e',
+                                                                            fontWeight: '500',
+                                                                            marginBottom: 1,
+                                                                            fontSize: '0.8rem'
+                                                                        }}
+                                                                    >
+                                                                        Score: {typeof result.score === 'number'
+                                                                            ? result.score.toLocaleString()
+                                                                            : 'N/A'}
+                                                                    </Typography>
+                                                                    <Box sx={{
+                                                                        display: 'flex',
+                                                                        flexWrap: 'wrap',
+                                                                        gap: 0.5,
+                                                                        justifyContent: 'center'
+                                                                    }}>
+                                                                        {result.tags && Array.isArray(result.tags) && result.tags.length > 0 ? (
+                                                                            result.tags.slice(0, 2).map((tag: string, tagIndex: number) => (
+                                                                                <Chip
+                                                                                    key={tagIndex}
+                                                                                    label={tag}
+                                                                                    size="small"
+                                                                                    sx={{
+                                                                                        backgroundColor: '#ecf0f1',
+                                                                                        color: '#2c3e50',
+                                                                                        fontSize: '0.65rem',
+                                                                                        height: '20px',
+                                                                                        fontWeight: 500,
+                                                                                        '& .MuiChip-label': {
+                                                                                            padding: '0 6px',
+                                                                                        }
+                                                                                    }}
+                                                                                />
+                                                                            ))
+                                                                        ) : (
+                                                                            <Chip
+                                                                                label="No tags"
+                                                                                size="small"
+                                                                                sx={{
+                                                                                    backgroundColor: '#ecf0f1',
+                                                                                    color: '#7f8c8d',
+                                                                                    fontSize: '0.65rem',
+                                                                                    height: '20px',
+                                                                                    fontWeight: 500,
+                                                                                    '& .MuiChip-label': {
+                                                                                        padding: '0 6px',
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                        )}
+                                                                    </Box>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))}
+                                                    </Box>
+                                                );
+                                            })()}
+                                        </Box>
+
+                                        {/* Carousel Indicators */}
+                                        {(() => {
+                                            const groupedResults = chunkArray(search.results, 6);
+                                            return groupedResults.length > 1 && (
+                                                <Box sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    gap: 1,
+                                                    marginTop: 3
+                                                }}>
+                                                    {groupedResults.map((_, index) => (
+                                                        <Box
+                                                            key={index}
+                                                            onClick={() => setCarouselIndices(prev => ({
+                                                                ...prev,
+                                                                [search.id]: index
+                                                            }))}
+                                                            sx={{
+                                                                width: 12,
+                                                                height: 12,
+                                                                borderRadius: '50%',
+                                                                backgroundColor: index === getCurrentIndex(search.id)
+                                                                    ? '#667eea'
+                                                                    : 'rgba(102, 126, 234, 0.3)',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s ease-in-out',
+                                                                '&:hover': {
+                                                                    backgroundColor: index === getCurrentIndex(search.id)
+                                                                        ? '#5a6fd8'
+                                                                        : 'rgba(102, 126, 234, 0.5)',
+                                                                    transform: 'scale(1.2)',
+                                                                }
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            );
+                                        })()}
+
+                                        {/* Result Counter */}
+                                        <Box sx={{
+                                            textAlign: 'center',
+                                            marginTop: 2
+                                        }}>
+                                            <Typography
+                                                variant="body2"
                                                 sx={{
-                                                    background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-                                                    border: '1px solid rgba(0, 0, 0, 0.06)',
-                                                    borderRadius: 2,
-                                                    transition: 'all 0.2s ease-in-out',
-                                                    '&:hover': {
-                                                        transform: 'translateY(-2px)',
-                                                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                                                        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                                                    },
+                                                    color: '#7f8c8d',
+                                                    fontWeight: 500,
+                                                    fontSize: '0.9rem'
                                                 }}
                                             >
-                                                <CardContent sx={{ padding: 2.5 }}>
-                                                    <Typography
-                                                        variant="h6"
-                                                        component="div"
-                                                        sx={{
-                                                            color: '#2c3e50',
-                                                            fontWeight: '600',
-                                                            marginBottom: 1,
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                            fontSize: '1rem'
-                                                        }}
-                                                    >
-                                                        {result.word || 'Unknown'}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{
-                                                            color: '#34495e',
-                                                            fontWeight: '500',
-                                                            marginBottom: 1.5,
-                                                            fontSize: '0.875rem'
-                                                        }}
-                                                    >
-                                                        Score: {typeof result.score === 'number' ? result.score.toLocaleString() : 'N/A'}
-                                                    </Typography>
-                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                        {result.tags && Array.isArray(result.tags) && result.tags.length > 0 ? (
-                                                            result.tags.slice(0, 3).map((tag, tagIndex) => (
-                                                                <Chip
-                                                                    key={tagIndex}
-                                                                    label={tag}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        backgroundColor: '#ecf0f1',
-                                                                        color: '#2c3e50',
-                                                                        fontSize: '0.7rem',
-                                                                        height: '22px',
-                                                                        fontWeight: 500,
-                                                                        '& .MuiChip-label': {
-                                                                            padding: '0 8px',
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            ))
-                                                        ) : (
-                                                            <Chip
-                                                                label="No tags"
-                                                                size="small"
-                                                                sx={{
-                                                                    backgroundColor: '#ecf0f1',
-                                                                    color: '#7f8c8d',
-                                                                    fontSize: '0.7rem',
-                                                                    height: '22px',
-                                                                    fontWeight: 500,
-                                                                    '& .MuiChip-label': {
-                                                                        padding: '0 8px',
-                                                                    }
-                                                                }}
-                                                            />
-                                                        )}
-                                                    </Box>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
+                                                {(() => {
+                                                    const groupedResults = chunkArray(search.results, 6);
+                                                    const currentGroup = groupedResults[getCurrentIndex(search.id)] || [];
+                                                    const startIndex = getCurrentIndex(search.id) * 6 + 1;
+                                                    const endIndex = startIndex + currentGroup.length - 1;
+                                                    return `Showing ${startIndex}-${endIndex} of ${search.results.length} results`;
+                                                })()}
+                                            </Typography>
+                                        </Box>
                                     </Box>
 
                                     {/* Expand/Collapse Button */}
-                                    {search.results.length > 6 && (
+                                    {search.results.length > 1 && (
                                         <Box sx={{ textAlign: 'center' }}>
                                             <Button
                                                 onClick={() => toggleSearchExpansion(search.id)}
@@ -502,10 +700,108 @@ const History: React.FC = () => {
                                                 startIcon={expandedSearches.has(search.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                             >
                                                 {expandedSearches.has(search.id)
-                                                    ? 'Show Less'
-                                                    : `View ${search.results.length - 6} More Results`
+                                                    ? 'Hide All Results'
+                                                    : 'View All Results in Grid'
                                                 }
                                             </Button>
+                                        </Box>
+                                    )}
+
+                                    {/* Expanded Grid View */}
+                                    {expandedSearches.has(search.id) && (
+                                        <Box sx={{
+                                            display: 'grid',
+                                            gridTemplateColumns: {
+                                                xs: '1fr',
+                                                sm: 'repeat(2, 1fr)',
+                                                md: 'repeat(3, 1fr)',
+                                                lg: 'repeat(4, 1fr)'
+                                            },
+                                            gap: 2.5,
+                                            marginTop: 3
+                                        }}>
+                                            {search.results.map((result, index) => (
+                                                <Card
+                                                    key={`${result.word || 'unknown'}-${index}`}
+                                                    elevation={0}
+                                                    sx={{
+                                                        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                                                        border: '1px solid rgba(0, 0, 0, 0.06)',
+                                                        borderRadius: 2,
+                                                        transition: 'all 0.2s ease-in-out',
+                                                        '&:hover': {
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                                                            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                                                        },
+                                                    }}
+                                                >
+                                                    <CardContent sx={{ padding: 2.5 }}>
+                                                        <Typography
+                                                            variant="h6"
+                                                            component="div"
+                                                            sx={{
+                                                                color: '#2c3e50',
+                                                                fontWeight: '600',
+                                                                marginBottom: 1,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                fontSize: '1rem'
+                                                            }}
+                                                        >
+                                                            {result.word || 'Unknown'}
+                                                        </Typography>
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                color: '#34495e',
+                                                                fontWeight: '500',
+                                                                marginBottom: 1.5,
+                                                                fontSize: '0.875rem'
+                                                            }}
+                                                        >
+                                                            Score: {typeof result.score === 'number' ? result.score.toLocaleString() : 'N/A'}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                            {result.tags && Array.isArray(result.tags) && result.tags.length > 0 ? (
+                                                                result.tags.slice(0, 3).map((tag: string, tagIndex: number) => (
+                                                                    <Chip
+                                                                        key={tagIndex}
+                                                                        label={tag}
+                                                                        size="small"
+                                                                        sx={{
+                                                                            backgroundColor: '#ecf0f1',
+                                                                            color: '#2c3e50',
+                                                                            fontSize: '0.7rem',
+                                                                            height: '22px',
+                                                                            fontWeight: 500,
+                                                                            '& .MuiChip-label': {
+                                                                                padding: '0 8px',
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                ))
+                                                            ) : (
+                                                                <Chip
+                                                                    label="No tags"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        backgroundColor: '#ecf0f1',
+                                                                        color: '#7f8c8d',
+                                                                        fontSize: '0.7rem',
+                                                                        height: '22px',
+                                                                        fontWeight: 500,
+                                                                        '& .MuiChip-label': {
+                                                                            padding: '0 8px',
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
                                         </Box>
                                     )}
                                 </Paper>
@@ -514,6 +810,71 @@ const History: React.FC = () => {
                     </Box>
                 )}
             </Container>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={closeDeleteDialog}
+                aria-labelledby="delete-dialog-title"
+                aria-describedby="delete-dialog-description"
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2,
+                        minWidth: 300
+                    }
+                }}
+            >
+                <DialogTitle
+                    id="delete-dialog-title"
+                    sx={{
+                        color: '#2c3e50',
+                        fontWeight: 600,
+                        fontSize: '1.1rem',
+                        textAlign: 'center'
+                    }}
+                >
+                    Delete Search?
+                </DialogTitle>
+                <DialogContent sx={{ padding: 2 }}>
+                    <Typography
+                        id="delete-dialog-description"
+                        sx={{
+                            fontSize: '0.95rem',
+                            color: '#7f8c8d',
+                            textAlign: 'center'
+                        }}
+                    >
+                        Are you sure you want to delete this search?
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ padding: 2, gap: 1, justifyContent: 'center' }}>
+                    <Button
+                        onClick={closeDeleteDialog}
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                            borderRadius: 1.5,
+                            padding: '6px 16px',
+                            textTransform: 'none'
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={confirmDelete}
+                        variant="contained"
+                        size="small"
+                        color="error"
+                        sx={{
+                            borderRadius: 1.5,
+                            padding: '6px 16px',
+                            textTransform: 'none'
+                        }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

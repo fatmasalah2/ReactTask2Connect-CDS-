@@ -79,7 +79,7 @@ const LoginPage: React.FC = () => {
                     lineHeight: 1.2
                   }}
                 >
-                  Welcome 
+                  Welcome
                 </Typography>
                 <Typography
                   variant="h6"

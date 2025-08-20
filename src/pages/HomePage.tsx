@@ -403,7 +403,10 @@ const HomePage: React.FC = () => {
                                 </Button>
                                 <Button
                                     variant="outlined"
-                                    onClick={() => navigate('/')}
+                                    onClick={() => {
+                                        localStorage.removeItem("authToken");
+                                        navigate('/');
+                                    }}
                                     startIcon={<LogoutIcon />}
                                     sx={{
                                         color: 'white',
@@ -751,81 +754,7 @@ const HomePage: React.FC = () => {
                     </Paper>
                 )}
 
-                {/* Show current API URL when input is provided */}
-                {selectedSearchType && input.trim() && (
-                    <Box sx={{ textAlign: 'center', marginTop: 5 }}>
-                        <Box sx={{
-                            padding: 3,
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            borderRadius: 2,
-                            border: '1px solid rgba(102, 126, 234, 0.2)'
-                        }}>
-                            <Typography variant="body2" color="rgba(44, 62, 80, 0.8)" sx={{ display: 'block', marginBottom: 1, fontWeight: 600 }}>
-                                🔗 <strong>API URL:</strong>
-                            </Typography>
-                            <Typography
-                                variant="caption"
-                                color="rgba(44, 62, 80, 0.9)"
-                                sx={{
-                                    display: 'block',
-                                    fontFamily: 'monospace',
-                                    fontSize: '0.8rem',
-                                    wordBreak: 'break-all',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                                    padding: 2,
-                                    borderRadius: 1,
-                                    border: '1px solid rgba(102, 126, 234, 0.2)'
-                                }}
-                            >
-                                {(() => {
-                                    if (selectedSearchType === 'sug') {
-                                        return `https://api.datamuse.com/sug?s=${encodeURIComponent(input.trim())}`;
-                                    } else {
-                                        let params: any = {};
 
-                                        if (selectedSearchType === "ml") {
-                                            params.ml = input.trim();
-                                        } else if (selectedSearchType === "ml_sp") {
-                                            const parts = input.trim().split(" ");
-                                            params.ml = parts[0];
-                                            params.sp = `${parts[1]}*`;
-                                        } else if (selectedSearchType === "ml_sp_end") {
-                                            const parts = input.trim().split(" ");
-                                            params.ml = parts[0];
-                                            params.sp = `*${parts[1]}`;
-                                        } else if (selectedSearchType === "sl") {
-                                            params.sl = input.trim();
-                                        } else if (selectedSearchType === "sp_pattern") {
-                                            const parts = input.trim().split(" ");
-                                            const middleCount = parseInt(parts[2]);
-                                            params.sp = `${parts[0]}${"?".repeat(middleCount)}${parts[1]}`;
-                                        } else if (selectedSearchType === "sp") {
-                                            params.sp = input.trim();
-                                        } else if (selectedSearchType === "rel_jjb") {
-                                            params.rel_jjb = input.trim();
-                                        } else if (selectedSearchType === "rel_jjb_topic") {
-                                            const parts = input.trim().split(" ");
-                                            params.rel_jjb = parts[0];
-                                        } else if (selectedSearchType === "rel_jja") {
-                                            params.rel_jja = input.trim();
-                                        } else if (selectedSearchType === "lc_sp") {
-                                            const parts = input.trim().split(" ");
-                                            params.lc = parts[0];
-                                            params.sp = `${parts[1]}*`;
-                                        } else if (selectedSearchType === "rel_trg") {
-                                            params.rel_trg = input.trim();
-                                        }
-
-                                        params.max = 100;
-
-                                        const queryString = new URLSearchParams(params).toString();
-                                        return `https://api.datamuse.com/words?${queryString}`;
-                                    }
-                                })()}
-                            </Typography>
-                        </Box>
-                    </Box>
-                )}
             </Container>
         </Box>
     );

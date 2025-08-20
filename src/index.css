@@ -32,32 +32,124 @@ body {
   overflow: hidden;
 }
 
-/* Hide scrollbars globally */
-html,
-body {
-
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* Internet Explorer 10+ */
-}
-
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none;
-  /* Chrome, Safari, Opera */
-}
-
+/* Comprehensive scrollbar removal for all elements */
 * {
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* Internet Explorer 10+ */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 *::-webkit-scrollbar {
-  display: none;
-  /* Chrome, Safari, Opera */
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+*::-webkit-scrollbar-track {
+  display: none !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  display: none !important;
+}
+
+*::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Specific elements that commonly have scrollbars */
+html,
+body,
+div,
+section,
+main,
+aside,
+article,
+nav,
+header,
+footer,
+form,
+ul,
+ol,
+li,
+table,
+tbody,
+thead,
+tfoot,
+tr,
+td,
+th,
+textarea,
+select,
+iframe,
+canvas,
+svg {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar,
+main::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+article::-webkit-scrollbar,
+nav::-webkit-scrollbar,
+header::-webkit-scrollbar,
+footer::-webkit-scrollbar,
+form::-webkit-scrollbar,
+ul::-webkit-scrollbar,
+ol::-webkit-scrollbar,
+li::-webkit-scrollbar,
+table::-webkit-scrollbar,
+tbody::-webkit-scrollbar,
+thead::-webkit-scrollbar,
+tfoot::-webkit-scrollbar,
+tr::-webkit-scrollbar,
+td::-webkit-scrollbar,
+th::-webkit-scrollbar,
+textarea::-webkit-scrollbar,
+select::-webkit-scrollbar,
+iframe::-webkit-scrollbar,
+canvas::-webkit-scrollbar,
+svg::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/* Material-UI specific elements */
+.MuiBox-root,
+.MuiContainer-root,
+.MuiPaper-root,
+.MuiCard-root,
+.MuiDialog-root,
+.MuiDrawer-root,
+.MuiMenu-root,
+.MuiPopover-root,
+.MuiTooltip-root,
+.MuiAccordion-root,
+.MuiList-root,
+.MuiTableContainer-root {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.MuiBox-root::-webkit-scrollbar,
+.MuiContainer-root::-webkit-scrollbar,
+.MuiPaper-root::-webkit-scrollbar,
+.MuiCard-root::-webkit-scrollbar,
+.MuiDialog-root::-webkit-scrollbar,
+.MuiDrawer-root::-webkit-scrollbar,
+.MuiMenu-root::-webkit-scrollbar,
+.MuiPopover-root::-webkit-scrollbar,
+.MuiTooltip-root::-webkit-scrollbar,
+.MuiAccordion-root::-webkit-scrollbar,
+.MuiList-root::-webkit-scrollbar,
+.MuiTableContainer-root::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
 h1 {
